@@ -1,0 +1,3 @@
+[submodule "SphereSfM"]
+	path = SphereSfM
+	url = https://github.com/json87/SphereSfM.git
