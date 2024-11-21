@@ -1,0 +1,147 @@
+Channels:
+ - defaults
+Platform: linux-64
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... done
+
+## Package Plan ##
+
+  environment location: /home/williamrhee/anaconda3/envs/superglue
+
+  added / updated specs:
+    - matplotlib
+    - numpy
+    - python=3.9
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    contourpy-1.2.0            |   py39hdb19cb5_0         244 KB
+    fonttools-4.51.0           |   py39h5eee18b_0         2.3 MB
+    importlib_resources-6.4.0  |   py39h06a4308_0          61 KB
+    kiwisolver-1.4.4           |   py39h6a678d5_0          76 KB
+    libwebp-base-1.3.2         |       h5eee18b_1         425 KB
+    matplotlib-3.9.2           |   py39h06a4308_0           7 KB
+    matplotlib-base-3.9.2      |   py39hbfdbfaf_0         7.0 MB
+    mkl-service-2.4.0          |   py39h5eee18b_1          54 KB
+    mkl_fft-1.3.10             |   py39h5eee18b_0         218 KB
+    mkl_random-1.2.7           |   py39h1128e8f_0         352 KB
+    numpy-1.26.4               |   py39h5f9d8c6_0          10 KB
+    numpy-base-1.26.4          |   py39hb5e798b_0         7.2 MB
+    packaging-24.1             |   py39h06a4308_0         147 KB
+    pillow-10.4.0              |   py39h5eee18b_0         799 KB
+    pip-24.2                   |   py39h06a4308_0         2.2 MB
+    ply-3.11                   |   py39h06a4308_0          81 KB
+    pyparsing-3.1.2            |   py39h06a4308_0         399 KB
+    pyqt-5.15.10               |   py39h6a678d5_0         5.7 MB
+    pyqt5-sip-12.13.0          |   py39h5eee18b_0          95 KB
+    python-3.9.20              |       he870216_1        25.1 MB
+    python-dateutil-2.9.0post0 |   py39h06a4308_2         279 KB
+    setuptools-75.1.0          |   py39h06a4308_0         1.7 MB
+    sip-6.7.12                 |   py39h6a678d5_0         505 KB
+    tomli-2.0.1                |   py39h06a4308_0          24 KB
+    tornado-6.4.1              |   py39h5eee18b_0         645 KB
+    unicodedata2-15.1.0        |   py39h5eee18b_0         519 KB
+    wheel-0.44.0               |   py39h06a4308_0         108 KB
+    zipp-3.20.2                |   py39h06a4308_0          25 KB
+    ------------------------------------------------------------
+                                           Total:        56.1 MB
+
+The following NEW packages will be INSTALLED:
+
+  _libgcc_mutex      pkgs/main/linux-64::_libgcc_mutex-0.1-main 
+  _openmp_mutex      pkgs/main/linux-64::_openmp_mutex-5.1-1_gnu 
+  blas               pkgs/main/linux-64::blas-1.0-mkl 
+  brotli             pkgs/main/linux-64::brotli-1.0.9-h5eee18b_8 
+  brotli-bin         pkgs/main/linux-64::brotli-bin-1.0.9-h5eee18b_8 
+  bzip2              pkgs/main/linux-64::bzip2-1.0.8-h5eee18b_6 
+  ca-certificates    pkgs/main/linux-64::ca-certificates-2024.9.24-h06a4308_0 
+  contourpy          pkgs/main/linux-64::contourpy-1.2.0-py39hdb19cb5_0 
+  cycler             pkgs/main/noarch::cycler-0.11.0-pyhd3eb1b0_0 
+  cyrus-sasl         pkgs/main/linux-64::cyrus-sasl-2.1.28-h52b45da_1 
+  dbus               pkgs/main/linux-64::dbus-1.13.18-hb2f20db_0 
+  expat              pkgs/main/linux-64::expat-2.6.3-h6a678d5_0 
+  fontconfig         pkgs/main/linux-64::fontconfig-2.14.1-h55d465d_3 
+  fonttools          pkgs/main/linux-64::fonttools-4.51.0-py39h5eee18b_0 
+  freetype           pkgs/main/linux-64::freetype-2.12.1-h4a9f257_0 
+  glib               pkgs/main/linux-64::glib-2.78.4-h6a678d5_0 
+  glib-tools         pkgs/main/linux-64::glib-tools-2.78.4-h6a678d5_0 
+  gst-plugins-base   pkgs/main/linux-64::gst-plugins-base-1.14.1-h6a678d5_1 
+  gstreamer          pkgs/main/linux-64::gstreamer-1.14.1-h5eee18b_1 
+  icu                pkgs/main/linux-64::icu-73.1-h6a678d5_0 
+  importlib_resourc~ pkgs/main/linux-64::importlib_resources-6.4.0-py39h06a4308_0 
+  intel-openmp       pkgs/main/linux-64::intel-openmp-2023.1.0-hdb19cb5_46306 
+  jpeg               pkgs/main/linux-64::jpeg-9e-h5eee18b_3 
+  kiwisolver         pkgs/main/linux-64::kiwisolver-1.4.4-py39h6a678d5_0 
+  krb5               pkgs/main/linux-64::krb5-1.20.1-h143b758_1 
+  lcms2              pkgs/main/linux-64::lcms2-2.12-h3be6417_0 
+  ld_impl_linux-64   pkgs/main/linux-64::ld_impl_linux-64-2.40-h12ee557_0 
+  lerc               pkgs/main/linux-64::lerc-3.0-h295c915_0 
+  libbrotlicommon    pkgs/main/linux-64::libbrotlicommon-1.0.9-h5eee18b_8 
+  libbrotlidec       pkgs/main/linux-64::libbrotlidec-1.0.9-h5eee18b_8 
+  libbrotlienc       pkgs/main/linux-64::libbrotlienc-1.0.9-h5eee18b_8 
+  libclang           pkgs/main/linux-64::libclang-14.0.6-default_hc6dbbc7_1 
+  libclang13         pkgs/main/linux-64::libclang13-14.0.6-default_he11475f_1 
+  libcups            pkgs/main/linux-64::libcups-2.4.2-h2d74bed_1 
+  libdeflate         pkgs/main/linux-64::libdeflate-1.17-h5eee18b_1 
+  libedit            pkgs/main/linux-64::libedit-3.1.20230828-h5eee18b_0 
+  libffi             pkgs/main/linux-64::libffi-3.4.4-h6a678d5_1 
+  libgcc-ng          pkgs/main/linux-64::libgcc-ng-11.2.0-h1234567_1 
+  libglib            pkgs/main/linux-64::libglib-2.78.4-hdc74915_0 
+  libgomp            pkgs/main/linux-64::libgomp-11.2.0-h1234567_1 
+  libiconv           pkgs/main/linux-64::libiconv-1.16-h5eee18b_3 
+  libllvm14          pkgs/main/linux-64::libllvm14-14.0.6-hecde1de_4 
+  libpng             pkgs/main/linux-64::libpng-1.6.39-h5eee18b_0 
+  libpq              pkgs/main/linux-64::libpq-12.17-hdbd6064_0 
+  libstdcxx-ng       pkgs/main/linux-64::libstdcxx-ng-11.2.0-h1234567_1 
+  libtiff            pkgs/main/linux-64::libtiff-4.5.1-h6a678d5_0 
+  libuuid            pkgs/main/linux-64::libuuid-1.41.5-h5eee18b_0 
+  libwebp-base       pkgs/main/linux-64::libwebp-base-1.3.2-h5eee18b_1 
+  libxcb             pkgs/main/linux-64::libxcb-1.15-h7f8727e_0 
+  libxkbcommon       pkgs/main/linux-64::libxkbcommon-1.0.1-h097e994_2 
+  libxml2            pkgs/main/linux-64::libxml2-2.13.1-hfdd30dd_2 
+  lz4-c              pkgs/main/linux-64::lz4-c-1.9.4-h6a678d5_1 
+  matplotlib         pkgs/main/linux-64::matplotlib-3.9.2-py39h06a4308_0 
+  matplotlib-base    pkgs/main/linux-64::matplotlib-base-3.9.2-py39hbfdbfaf_0 
+  mkl                pkgs/main/linux-64::mkl-2023.1.0-h213fc3f_46344 
+  mkl-service        pkgs/main/linux-64::mkl-service-2.4.0-py39h5eee18b_1 
+  mkl_fft            pkgs/main/linux-64::mkl_fft-1.3.10-py39h5eee18b_0 
+  mkl_random         pkgs/main/linux-64::mkl_random-1.2.7-py39h1128e8f_0 
+  mysql              pkgs/main/linux-64::mysql-5.7.24-h721c034_2 
+  ncurses            pkgs/main/linux-64::ncurses-6.4-h6a678d5_0 
+  numpy              pkgs/main/linux-64::numpy-1.26.4-py39h5f9d8c6_0 
+  numpy-base         pkgs/main/linux-64::numpy-base-1.26.4-py39hb5e798b_0 
+  openjpeg           pkgs/main/linux-64::openjpeg-2.5.2-he7f1fd0_0 
+  openssl            pkgs/main/linux-64::openssl-3.0.15-h5eee18b_0 
+  packaging          pkgs/main/linux-64::packaging-24.1-py39h06a4308_0 
+  pcre2              pkgs/main/linux-64::pcre2-10.42-hebb0a14_1 
+  pillow             pkgs/main/linux-64::pillow-10.4.0-py39h5eee18b_0 
+  pip                pkgs/main/linux-64::pip-24.2-py39h06a4308_0 
+  ply                pkgs/main/linux-64::ply-3.11-py39h06a4308_0 
+  pyparsing          pkgs/main/linux-64::pyparsing-3.1.2-py39h06a4308_0 
+  pyqt               pkgs/main/linux-64::pyqt-5.15.10-py39h6a678d5_0 
+  pyqt5-sip          pkgs/main/linux-64::pyqt5-sip-12.13.0-py39h5eee18b_0 
+  python             pkgs/main/linux-64::python-3.9.20-he870216_1 
+  python-dateutil    pkgs/main/linux-64::python-dateutil-2.9.0post0-py39h06a4308_2 
+  qt-main            pkgs/main/linux-64::qt-main-5.15.2-h53bd1ea_10 
+  readline           pkgs/main/linux-64::readline-8.2-h5eee18b_0 
+  setuptools         pkgs/main/linux-64::setuptools-75.1.0-py39h06a4308_0 
+  sip                pkgs/main/linux-64::sip-6.7.12-py39h6a678d5_0 
+  six                pkgs/main/noarch::six-1.16.0-pyhd3eb1b0_1 
+  sqlite             pkgs/main/linux-64::sqlite-3.45.3-h5eee18b_0 
+  tbb                pkgs/main/linux-64::tbb-2021.8.0-hdb19cb5_0 
+  tk                 pkgs/main/linux-64::tk-8.6.14-h39e8969_0 
+  tomli              pkgs/main/linux-64::tomli-2.0.1-py39h06a4308_0 
+  tornado            pkgs/main/linux-64::tornado-6.4.1-py39h5eee18b_0 
+  tzdata             pkgs/main/noarch::tzdata-2024b-h04d1e81_0 
+  unicodedata2       pkgs/main/linux-64::unicodedata2-15.1.0-py39h5eee18b_0 
+  wheel              pkgs/main/linux-64::wheel-0.44.0-py39h06a4308_0 
+  xz                 pkgs/main/linux-64::xz-5.4.6-h5eee18b_1 
+  zipp               pkgs/main/linux-64::zipp-3.20.2-py39h06a4308_0 
+  zlib               pkgs/main/linux-64::zlib-1.2.13-h5eee18b_1 
+  zstd               pkgs/main/linux-64::zstd-1.5.6-hc292b87_0 
+
+
+Proceed ([y]/n)? 
