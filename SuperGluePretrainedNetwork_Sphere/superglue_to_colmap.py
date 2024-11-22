@@ -1,35 +1,13 @@
 import os
 import glob
 import numpy as np
-import sqlite3
+from database import COLMAPDatabase, array_to_blob, image_ids_to_pair_id
 
-def create_colmap_database(db_path):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS keypoints (image_id INTEGER, rows INTEGER, cols INTEGER, data BLOB)")
-    cursor.execute("CREATE TABLE IF NOT EXISTS descriptors (image_id INTEGER, rows INTEGER, cols INTEGER, data BLOB)")
-    cursor.execute("CREATE TABLE IF NOT EXISTS matches (pair_id INTEGER PRIMARY KEY NOT NULL, rows INTEGER, cols INTEGER, data BLOB)")
-    return conn, cursor
-
-def save_keypoints(cursor, image_id, keypoints):
-    rows, cols = keypoints.shape
-    data = keypoints.tobytes()
-    cursor.execute("INSERT INTO keypoints (image_id, rows, cols, data) VALUES (?, ?, ?, ?)", (image_id, rows, cols, data))
-
-def save_descriptors(cursor, image_id, descriptors):
-    rows, cols = descriptors.shape
-    data = descriptors.tobytes()
-    cursor.execute("INSERT INTO descriptors (image_id, rows, cols, data) VALUES (?, ?, ?, ?)", (image_id, rows, cols, data))
-
-def save_matches(cursor, image_id1, image_id2, matches):
-    rows, cols = matches.shape
-    data = matches.tobytes()
-    pair_id = image_id1 * (2**31 - 1) + image_id2  # Create a unique pair_id
-    cursor.execute("INSERT INTO matches (pair_id, rows, cols, data) VALUES (?, ?, ?, ?)", (pair_id, rows, cols, data))
 
 def process_superglue_output(output_dir, db_path, images_dir):
-    # Initialize the database
-    conn, cursor = create_colmap_database(db_path)
+    # Initialize the database using the COLMAPDatabase class
+    db = COLMAPDatabase.connect(db_path)
+    db.create_tables()
 
     # Map image names to IDs based on the format 'image_XXXX' with padding
     image_id_map = {}
@@ -50,8 +28,13 @@ def process_superglue_output(output_dir, db_path, images_dir):
         image_id = image_id_map.get(base_name)
 
         if image_id is not None:
-            save_keypoints(cursor, image_id, keypoints)
-            save_descriptors(cursor, image_id, descriptors)
+            # Save keypoints
+            assert keypoints.ndim == 2
+            db.add_keypoints(image_id, keypoints)
+
+            # Save descriptors
+            assert descriptors.ndim == 2
+            db.add_descriptors(image_id, descriptors)
         else:
             print(f"Warning: Image ID for keypoints/descriptors {i+1} not found in image map.")
 
@@ -69,13 +52,16 @@ def process_superglue_output(output_dir, db_path, images_dir):
         image_id2 = image_id_map.get(f"image_{image2_idx:04d}")
 
         if image_id1 is not None and image_id2 is not None:
-            save_matches(cursor, image_id1, image_id2, match_data)
+            # Compute pair ID and save matches
+            pair_id = image_ids_to_pair_id(image_id1, image_id2)
+            db.add_matches(image_id1, image_id2, match_data)
         else:
             print(f"Warning: Match data between {image1_idx} and {image2_idx} could not be saved due to missing image IDs.")
 
     # Commit and close database
-    conn.commit()
-    conn.close()
+    db.commit()
+    db.close()
+
 
 if __name__ == "__main__":
     import argparse
