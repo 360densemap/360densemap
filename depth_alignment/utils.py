@@ -89,13 +89,51 @@ def point3D_to_spherical(camera_features):
         phi = np.arctan2(Y, X)    # Angle in the XY-plane from X-axis
         spherical_features.append((phi, theta, r))
     return spherical_features
-def load_depth_map(filepath):
-    # Example of loading depth map (assumed to be a .npy file)
-    return np.load(filepath)
 
-def load_colmap_depths(filepath):
-    # Load COLMAP feature depths, assume simple text or numpy format
-    return np.loadtxt(filepath)
+def quaternion_to_rotation_matrix(q):
+    """
+    Convert a quaternion to a 3x3 rotation matrix.
+    """
+    w, x, y, z = q
+    return np.array([
+        [1 - 2 * (y**2 + z**2), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+        [2 * (x * y + z * w), 1 - 2 * (x**2 + z**2), 2 * (y * z - x * w)],
+        [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x**2 + y**2)],
+    ])
+
+def world2cam(points3D, image_data, chosen_image_id):
+    """
+    Transform 3D points from world coordinates to the camera coordinates of a specific image.
+    
+    Parameters:
+    - points3D: Dictionary of 3D points (from `read_points3D`).
+    - image_data: Dictionary of image data (from `read_images`).
+    - chosen_image_id: ID of the image to use as the reference camera.
+    
+    Returns:
+    - points_camera: List of 3D points in the chosen image's camera coordinates.
+    """
+    # Get the camera extrinsic parameters for the chosen image
+    chosen_image = image_data[chosen_image_id]
+    quaternion = chosen_image["quaternion"]
+    translation = chosen_image["translation"]
+    
+    # Convert the quaternion to a rotation matrix
+    rotation_matrix = quaternion_to_rotation_matrix(quaternion)
+    translation_vector = np.array(translation)
+    
+    points_camera = []
+    for point_id, point_data in points3D.items():
+        # 3D point in world coordinates
+        point_world = np.array(point_data["xyz"])
+        
+        # Transform to camera coordinates: R * X + t
+        point_camera = np.dot(rotation_matrix, point_world) + translation_vector
+        points_camera.append((point_id, point_camera))
+    
+    return points_camera
+
+
 def group_images_by_pose(images, grouping_criterion="name_prefix"):
     """
     Groups images by pose based on a common identifier.
