@@ -1,7 +1,7 @@
 # depth_alignment/utils.py
 import numpy as np
 import cv2
-from depth_alignment.alignment import align_depths, apply_scale_bias
+from src.alignment import align_depths, apply_scale_bias
 
 def read_cameras(file_path):
     cameras = {}
@@ -26,16 +26,26 @@ def read_images(file_path):
             if line.startswith("#"):
                 line = file.readline()
                 continue
+
+            # Parse the first line (metadata)
             data = line.strip().split()
             image_id = int(data[0])
             quaternion = list(map(float, data[1:5]))
             translation = list(map(float, data[5:8]))
             camera_id = int(data[8])
             name = data[9]
-            keypoints = []
+
+            # Parse the second line (POINTS2D[])
             line = file.readline().strip()
-            if line:
-                keypoints = [tuple(map(float, point.split())) for point in line.split()]
+            keypoints = []
+            if line:  # Ensure the line is not empty
+                keypoints_raw = line.split()
+                for i in range(0, len(keypoints_raw), 3):
+                    if i + 2 < len(keypoints_raw):  # Ensure there are enough values to unpack
+                        x, y, point3D_id = float(keypoints_raw[i]), float(keypoints_raw[i + 1]), int(keypoints_raw[i + 2])
+                        keypoints.append((x, y, point3D_id))
+
+            # Store the parsed data
             images[image_id] = {
                 "quaternion": quaternion,
                 "translation": translation,
@@ -43,8 +53,11 @@ def read_images(file_path):
                 "name": name,
                 "keypoints": keypoints,
             }
+
+            # Read the next line
             line = file.readline()
     return images
+
 
 def read_points3D(file_path):
     points3D = {}
@@ -146,16 +159,20 @@ def group_images_by_pose(images, grouping_criterion="name_prefix"):
     - grouped_images (dict): Dictionary where each key is a pose ID and each value is a list of IMAGE_IDs.
     """
     grouped_images = {}
-    
-    if grouping_criterion == "name_prefix":
-        for image_id, data in images.items():
-            # Assume first part of the image name before an underscore defines the common pose
-            pose_id = data['name'].split('_')[0]  # e.g., 'P1180141' from 'P1180141_1.JPG'
-            if pose_id not in grouped_images:
-                grouped_images[pose_id] = []
-            grouped_images[pose_id].append(image_id)
+
+    for image_id, data in images.items():
+        if grouping_criterion == "name_prefix":
+            # Use the full name without extension as the pose ID
+            pose_id = data['name'].split('.')[0]  # e.g., 'image_0126' from 'image_0126.jpg'
+        else:
+            raise ValueError(f"Unknown grouping criterion: {grouping_criterion}")
+
+        if pose_id not in grouped_images:
+            grouped_images[pose_id] = []
+        grouped_images[pose_id].append(image_id)
 
     return grouped_images
+
 
 def aggregate_features_for_pose(image_data, points3D, grouped_images, pose_id):
     """

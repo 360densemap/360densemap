@@ -8,7 +8,7 @@ def align_depths(colmap_depths, depth_estimates):
     b = colmap_depths
 
     # Solve using SciPy's least squares
-    result = least_squares(lambda x: A @ x - b, x0=[1.0, 0.0])
+    result = least_squares(lambda x: A @ x - b, x0=[1.0, 0.0], loss='huber', f_scale=1.0)
     scale, bias = result.x
     return scale, bias
 

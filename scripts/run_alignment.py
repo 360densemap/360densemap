@@ -1,23 +1,44 @@
 # scripts/run_alignment.py
-from depth_alignment.alignment import align_depths, apply_scale_bias
-from depth_alignment import utils
+from src.alignment import align_depths, apply_scale_bias
+from src import utils
+from src.visualize import (visualize_features_on_image, visualize_depth_alignment, visualize_spherical_with_depth)
+
+import os
 import numpy as np
+
+
+# Dynamically calculate the project root
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+
+# Paths to the input files
+CAMERAS_FILE = os.path.join(PROJECT_ROOT, 'depth_alignment/Input/cameras.txt')
+IMAGES_FILE = os.path.join(PROJECT_ROOT, 'depth_alignment/Input/images.txt')
+POINTS3D_FILE = os.path.join(PROJECT_ROOT, 'depth_alignment/Input/points3D.txt')
+
 
 def main():
     # Load COLMAP data
-    cameras = utils.read_cameras('data/cameras.txt')
-    images = utils.read_images('data/images.txt')
-    points3D = utils.read_points3D('data/points3D.txt')
+    cameras = utils.read_cameras(CAMERAS_FILE)
+    images = utils.read_images(IMAGES_FILE)
+    points3D = utils.read_points3D(POINTS3D_FILE)
 
     # Group images by pose (assuming filename prefix method)
     grouped_images = utils.group_images_by_pose(images, grouping_criterion="name_prefix")
 
+    # Debug: Print all generated pose IDs
+    #print("Generated pose IDs:", list(grouped_images.keys()))
+
     # Choose a pose ID to aggregate (e.g., 'P1180141')
-    pose_id = 'P1180141'
+    pose_id = 'image_0062'
 
     # Aggregate features for the chosen pose
     aggregated_features = utils.aggregate_features_for_pose(images, points3D, grouped_images, pose_id)
 
+    # Visualize 2D features
+    features_2d = [(x, y) for x, y, _ in aggregated_features]
+    visualize_features_on_image('data/depth_map.png', features_2d)
+    
+    
     # Convert aggregated features to spherical coordinates and compute depth simultaneously
     spherical_with_depth = []
     for x, y, (X, Y, Z) in aggregated_features:
@@ -30,6 +51,9 @@ def main():
 
         # Store spherical coordinates with depth
         spherical_with_depth.append({"phi": phi, "theta": theta, "depth": depth})
+
+    # Visualize spherical coordinates with depths
+    visualize_spherical_with_depth(spherical_with_depth)
 
     # Print the spherical coordinates and depths
     print("Spherical coordinates with depths for each feature:")
@@ -57,6 +81,9 @@ def main():
     # Apply scale and bias to the depth map for final alignment
     aligned_depth = apply_scale_bias(depth_map, scale, bias)
     print("Aligned depth map:", aligned_depth)
+
+    # Visualize aligned depth map and differences
+    visualize_depth_alignment(depth_map, aligned_depth)
 
 if __name__ == "__main__":
     main()
