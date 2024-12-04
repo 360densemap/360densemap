@@ -93,15 +93,6 @@ def get_features_for_camera(image_data, points3D, chosen_image_id):
 
     return camera_features
 
-def point3D_to_spherical(camera_features):
-    spherical_features = []
-    for x, y, (X, Y, Z) in camera_features:
-        # Compute spherical coordinates (phi, theta) for the 3D point
-        r = np.sqrt(X**2 + Y**2 + Z**2)
-        theta = np.arccos(Z / r)  # Angle with respect to Z-axis
-        phi = np.arctan2(Y, X)    # Angle in the XY-plane from X-axis
-        spherical_features.append((phi, theta, r))
-    return spherical_features
 
 def quaternion_to_rotation_matrix(q):
     """
@@ -114,91 +105,154 @@ def quaternion_to_rotation_matrix(q):
         [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x**2 + y**2)],
     ])
 
-def world2cam(points3D, image_data, chosen_image_id):
+def spherical_coordinates_and_depth(features):
+    """
+    Compute spherical coordinates (phi, theta) and metric depth for 3D points in the camera frame.
+
+    Parameters:
+    - features: List of (x, y, (X, Y, Z)) tuples, where (X, Y, Z) are 3D points in the camera frame.
+
+    Returns:
+    - List of dictionaries containing phi, theta, depth, x, and y for each feature.
+    """
+    spherical_with_depth = []
+    for x, y, (X, Y, Z) in features:
+        # Calculate metric depth (distance from the origin in the camera frame)
+        depth = np.sqrt(X**2 + Y**2 + Z**2)
+        
+        # Calculate spherical coordinates (phi, theta)
+        theta = np.arccos(Z / depth) if depth != 0 else 0  # Angle from Z-axis
+        phi = np.arctan2(Y, X)  # Angle in the XY-plane
+        
+        # Append the data, including 2D feature coordinates
+        spherical_with_depth.append({
+            "phi": phi, 
+            "theta": theta, 
+            "depth": depth, 
+            "x": x, 
+            "y": y
+        })
+    return spherical_with_depth
+
+
+def world2cam(features_3D, quaternion, translation):
     """
     Transform 3D points from world coordinates to the camera coordinates of a specific image.
-    
+
     Parameters:
-    - points3D: Dictionary of 3D points (from `read_points3D`).
-    - image_data: Dictionary of image data (from `read_images`).
-    - chosen_image_id: ID of the image to use as the reference camera.
-    
+    - features_3D: List of 3D points in world coordinates (filtered from `get_features_for_camera`).
+    - quaternion: Quaternion defining the camera's orientation.
+    - translation: Translation vector defining the camera's position.
+
     Returns:
     - points_camera: List of 3D points in the chosen image's camera coordinates.
     """
-    # Get the camera extrinsic parameters for the chosen image
-    chosen_image = image_data[chosen_image_id]
-    quaternion = chosen_image["quaternion"]
-    translation = chosen_image["translation"]
-    
     # Convert the quaternion to a rotation matrix
     rotation_matrix = quaternion_to_rotation_matrix(quaternion)
     translation_vector = np.array(translation)
-    
-    points_camera = []
-    for point_id, point_data in points3D.items():
-        # 3D point in world coordinates
-        point_world = np.array(point_data["xyz"])
-        
-        # Transform to camera coordinates: R * X + t
-        point_camera = np.dot(rotation_matrix, point_world) + translation_vector
-        points_camera.append((point_id, point_camera))
-    
+
+    # Transform each point to the camera frame
+    points_camera = [
+        np.dot(rotation_matrix, np.array(point3D)) + translation_vector
+        for point3D in features_3D
+    ]
+
     return points_camera
 
-
-def group_images_by_pose(images, grouping_criterion="name_prefix"):
+def cam2world(points_camera, quaternion, translation):
     """
-    Groups images by pose based on a common identifier.
+    Transform 3D points from the camera coordinate system back to the world coordinate system.
 
     Parameters:
-    - images (dict): Dictionary of images from read_images.
-    - grouping_criterion (str): Method to group images (e.g., 'name_prefix').
+    - points_camera: List of 3D points in the camera coordinate system.
+    - quaternion: Quaternion defining the camera's orientation.
+    - translation: Translation vector defining the camera's position.
 
     Returns:
-    - grouped_images (dict): Dictionary where each key is a pose ID and each value is a list of IMAGE_IDs.
+    - points_world: List of 3D points in the world coordinate system.
     """
-    grouped_images = {}
+    # Convert quaternion to a rotation matrix
+    rotation_matrix = quaternion_to_rotation_matrix(quaternion)
+    rotation_matrix_inv = rotation_matrix.T  # Transpose is the inverse for rotation matrices
+    translation_vector = np.array(translation)
 
-    for image_id, data in images.items():
-        if grouping_criterion == "name_prefix":
-            # Use the full name without extension as the pose ID
-            pose_id = data['name'].split('.')[0]  # e.g., 'image_0126' from 'image_0126.jpg'
-        else:
-            raise ValueError(f"Unknown grouping criterion: {grouping_criterion}")
+    # Transform each point to the world frame
+    points_world = [
+        np.dot(rotation_matrix_inv, np.array(point_cam) - translation_vector)
+        for point_cam in points_camera
+    ]
 
-        if pose_id not in grouped_images:
-            grouped_images[pose_id] = []
-        grouped_images[pose_id].append(image_id)
-
-    return grouped_images
+    return points_world
 
 
-def aggregate_features_for_pose(image_data, points3D, grouped_images, pose_id):
+def load_depth_map(file_path):
     """
-    Aggregates unique 3D feature points seen across multiple perspective views for a single pose.
+    Loads a 16-bit depth map from a PNG file and converts it into a NumPy array.
 
     Parameters:
-    - image_data (dict): Dictionary of images from read_images.
-    - points3D (dict): Dictionary of 3D points from read_points3D.
-    - grouped_images (dict): Dictionary of grouped images by pose.
-    - pose_id (str): The identifier of the pose to aggregate features for.
+        file_path (str): Path to the depth map PNG file.
 
     Returns:
-    - aggregated_features (list): List of unique 3D features seen from this pose.
+        np.ndarray: The depth map as a NumPy array of float values.
     """
-    aggregated_features = []
-    unique_points = set()  # To track unique 3D points
+    # Read the RGB depth map
+    depth_map = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
+    
+    if depth_map is None:
+        raise FileNotFoundError(f"Could not load the depth map from {file_path}")
 
-    for image_id in grouped_images[pose_id]:
-        image_features = get_features_for_camera(image_data, points3D, image_id)
-        for x, y, point3D in image_features:
-            point3D_id = tuple(point3D)
-            if point3D_id not in unique_points:
-                aggregated_features.append((x, y, point3D))
-                unique_points.add(point3D_id)
+    # Convert to grayscale (single channel)
+    depth_map = cv2.cvtColor(depth_map, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    
+    # Optionally scale the depth values to metric values, if a scaling factor is known
+    # scale_factor = 0.001  # Example: Convert millimeters to meters
+    # depth_map *= scale_factor
 
-    return aggregated_features
+    return depth_map
+
+def match_features_with_depth_map(metric_depths, depth_map):
+    """
+    Matches metric depths with depth map values based on pixel coordinates.
+
+    Parameters:
+    - metric_depths (list): List of tuples (x, y, metric_depth), where
+        - x, y are the pixel coordinates in the image.
+        - metric_depth is the depth value from COLMAP.
+    - depth_map (np.ndarray): Loaded depth map as a 2D NumPy array.
+
+    Returns:
+    - colmap_depths (list): List of metric depths from COLMAP.
+    - depth_estimates (list): List of corresponding depth values from the depth map.
+    """
+    colmap_depths = []
+    depth_estimates = []
+
+    for x, y, metric_depth in metric_depths:
+        px, py = int(x), int(y)  # Ensure pixel indices are integers
+
+        # Ensure the pixel is within bounds
+        if 0 <= px < depth_map.shape[1] and 0 <= py < depth_map.shape[0]:
+            depth_map_value = depth_map[py, px]  # (y, x) indexing for images
+            if depth_map_value > 0:  # Valid depth value
+                colmap_depths.append(metric_depth)
+                depth_estimates.append(depth_map_value)
+
+    return colmap_depths, depth_estimates
+
+
+
+def match_depths_with_map(metric_depths, depth_map):
+    """
+    Matches metric depths with corresponding depth map values.
+    """
+    matches = []
+    for x, y, metric_depth in metric_depths:
+        px, py = int(x), int(y)
+        if 0 <= px < depth_map.shape[1] and 0 <= py < depth_map.shape[0]:
+            depth_map_value = depth_map[py, px]
+            if depth_map_value > 0:  # Valid depth map value
+                matches.append((metric_depth, depth_map_value))
+    return matches
 
 def match_and_align_depths(spherical_with_depth, depth_map, equirectangular_converter):
     """
@@ -240,41 +294,184 @@ def match_and_align_depths(spherical_with_depth, depth_map, equirectangular_conv
     aligned_depth_map = apply_scale_bias(depth_map, scale, bias)
     return aligned_depth_map, scale, bias
 
+def pixel_to_spherical(x, y, width, height, equ_cx, equ_cy):
+    """
+    Convert a pixel (x, y) in an equirectangular image to spherical coordinates (phi, theta).
 
-class EquirectangularToSpherical:
-    def __init__(self, img_name):
-        self._img = cv2.imread(img_name, cv2.IMREAD_COLOR)
-        [self._height, self._width, _] = self._img.shape
-        self._equ_cx = (self._width - 1) / 2.0
-        self._equ_cy = (self._height - 1) / 2.0
+    Parameters:
+    - x (float): x-coordinate of the pixel.
+    - y (float): y-coordinate of the pixel.
+    - width (int): Width of the equirectangular image.
+    - height (int): Height of the equirectangular image.
+    - equ_cx (float): X-coordinate of the image center.
+    - equ_cy (float): Y-coordinate of the image center.
 
-    def pixel_to_spherical(self, x, y):
-        """
-        Convert a pixel (x, y) in an equirectangular image to spherical coordinates (phi, theta).
+    Returns:
+    - phi (float): Longitude in degrees, ranging from -180 to 180.
+    - theta (float): Latitude in degrees, ranging from -90 to 90.
+    """
+    phi = (x - equ_cx) / equ_cx * 180
+    theta = -(y - equ_cy) / equ_cy * 90
+    return phi, theta
 
-        Parameters:
-        - x (float): x-coordinate of the pixel.
-        - y (float): y-coordinate of the pixel.
 
-        Returns:
-        - phi (float): Longitude in degrees, ranging from -180 to 180.
-        - theta (float): Latitude in degrees, ranging from -90 to 90.
-        """
-        phi = (x - self._equ_cx) / self._equ_cx * 180
-        theta = -(y - self._equ_cy) / self._equ_cy * 90
-        return phi, theta
-    
-    def spherical_to_pixel(self, phi, theta):
-        """
-        Convert spherical coordinates (phi, theta) to pixel coordinates in the equirectangular image.
 
-        Parameters:
-        - phi (float): Longitude in degrees, ranging from -180 to 180.
-        - theta (float): Latitude in degrees, ranging from -90 to 90.
+def spherical_to_cartesian(phi, theta, depth):
+    """
+    Converts spherical coordinates to Cartesian coordinates.
 
-        Returns:
-        - (x, y): Pixel coordinates in the equirectangular image.
-        """
-        x = int((phi / 180) * self._equ_cx + self._equ_cx)
-        y = int((-theta / 90) * self._equ_cy + self._equ_cy)
-        return x, y
+    Parameters:
+    - phi (float): Longitude in degrees.
+    - theta (float): Latitude in degrees.
+    - depth (float): Depth value (distance from the origin).
+
+    Returns:
+    - (X, Y, Z): Cartesian coordinates.
+    """
+    # Convert angles from degrees to radians
+    phi_rad = np.radians(phi)
+    theta_rad = np.radians(theta)
+
+    # Calculate Cartesian coordinates
+    X = depth * np.cos(theta_rad) * np.sin(phi_rad)
+    Y = depth * np.sin(theta_rad)
+    Z = depth * np.cos(theta_rad) * np.cos(phi_rad)
+
+    return X, Y, Z
+
+def generate_points3D_file(
+    aligned_depth_map,
+    original_features,
+    rgb_image,
+    output_file,
+    start_id,
+    error_value,
+    image_id,
+    quaternion,
+    translation,
+    start_point2d_idx,
+):
+    """
+    Generate a new points3D.txt file with additional feature points from the aligned depth map.
+
+    Parameters:
+    - aligned_depth_map (np.ndarray): 2D depth map after alignment.
+    - original_features (list): List of original feature points as (x, y).
+    - rgb_image (np.ndarray): Original RGB image corresponding to the depth map.
+    - output_file (str): Path to the output points3D.txt file.
+    - start_id (int): Starting ID for new POINT3D_IDs.
+    - error_value (float): Reprojection error for all new points.
+    - image_id (int): ID of the image these features belong to.
+    - quaternion (list): Quaternion defining the camera's orientation.
+    - translation (list): Translation vector defining the camera's position.
+    - start_point2d_idx (int): Starting index for POINT2D_IDX.
+
+    Returns:
+    - new_points2d (list): List of (x, y, POINT3D_ID, POINT2D_IDX) for images.txt.
+    """
+    # Track original feature points
+    original_feature_set = set((int(x), int(y)) for x, y in original_features)
+
+    # Prepare the new points
+    height, width = aligned_depth_map.shape
+    equ_cx, equ_cy = width / 2, height / 2
+    new_points = []
+    new_points2d = []  # To store (x, y, POINT3D_ID, POINT2D_IDX) for images.txt
+
+    point3d_id = start_id
+    point2d_idx = start_point2d_idx  # Initialize POINT2D_IDX
+
+    # Use a dictionary to track unique 3D points
+    unique_points = {}
+
+    for y in range(height):
+        for x in range(width):
+            # Skip pixels that are already in the original features
+            if (x, y) in original_feature_set:
+                continue
+
+            # Get the depth value
+            depth = aligned_depth_map[y, x]
+            if depth <= 0:  # Skip invalid or zero depth
+                continue
+
+            # Convert pixel to spherical coordinates
+            phi, theta = pixel_to_spherical(x, y, width, height, equ_cx, equ_cy)
+
+            # Convert spherical to Cartesian coordinates in the camera frame
+            X_cam, Y_cam, Z_cam = spherical_to_cartesian(phi, theta, depth)
+
+            # Create a unique hashable key for the 3D point
+            point_key = (round(X_cam, 6), round(Y_cam, 6), round(Z_cam, 6))
+
+            if point_key in unique_points:
+                continue  # Skip duplicate points
+
+            # Add to unique points
+            unique_points[point_key] = point3d_id
+
+            # Get RGB color from the original image
+            r, g, b = rgb_image[y, x]
+
+            # Add this point to the list
+            new_points.append({
+                "point3d_id": point3d_id,
+                "xyz_camera": (X_cam, Y_cam, Z_cam),
+                "rgb": (r, g, b),
+                "error": error_value,
+                "track": (image_id, point2d_idx)  # TRACK[] with IMAGE_ID and POINT2D_IDX
+            })
+
+            # Add to new_points2d for `images.txt`
+            new_points2d.append((x, y, point3d_id, point2d_idx))
+
+            # Increment IDs
+            point3d_id += 1
+            point2d_idx += 1
+
+    # Transform points from camera to world coordinates
+    points_world = cam2world([point["xyz_camera"] for point in new_points], quaternion, translation)
+
+    # Update the world coordinates in the new points
+    for i, point in enumerate(new_points):
+        point["xyz_world"] = points_world[i]
+
+    # Write the new points to the file
+    with open(output_file, 'w') as f:
+        # Write the header
+        f.write("# 3D point list with one line of data per point:\n")
+        f.write("#   POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as (IMAGE_ID, POINT2D_IDX)\n")
+        f.write(f"# Number of points: {len(new_points)}\n")
+        
+        # Write the points with higher precision
+        for point in new_points:
+            f.write(f"{point['point3d_id']} {point['xyz_world'][0]:.17f} {point['xyz_world'][1]:.17f} {point['xyz_world'][2]:.17f} "
+                    f"{point['rgb'][0]} {point['rgb'][1]} {point['rgb'][2]} {point['error']:.17f} "
+                    f"{point['track'][0]} {point['track'][1]}\n")
+
+    print(f"New points3D.txt file created at: {output_file}")
+    return new_points2d
+
+def generate_new_points_file_single_line(new_points2d, output_file):
+    """
+    Create a new file containing POINTS2D[] as (X, Y, POINT3D_ID) on a single line.
+
+    Parameters:
+    - new_points2d (list): List of (x, y, POINT3D_ID, POINT2D_IDX).
+    - output_file (str): Path to the output file.
+
+    Returns:
+    - None
+    """
+    with open(output_file, 'w') as f:
+        # Write a header for clarity
+        f.write("# New points file containing POINTS2D[] as (X, Y, POINT3D_ID)\n")
+        f.write("# Format: X Y POINT3D_ID\n")
+
+        # Create a single line string for all entries
+        points_line = " ".join(f"{x:.2f} {y:.2f} {point3d_id}" for x, y, point3d_id, _ in new_points2d)
+        
+        # Write the points to the file on a single line
+        f.write(points_line + "\n")
+
+    print(f"New points file created at: {output_file}")
